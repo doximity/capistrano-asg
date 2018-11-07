@@ -2,6 +2,7 @@ require 'aws-sdk-ec2'
 require 'aws-sdk-autoscaling'
 require 'capistrano/all'
 require 'active_support/concern'
+require 'duplicate'
 
 require 'capistrano/asg/version'
 require 'capistrano/asg/retryable'
@@ -24,7 +25,7 @@ require 'capistrano/dsl'
 
 load File.expand_path('../asg/tasks/asg.rake', __FILE__)
 
-def autoscale(groupname, **args)
+def autoscale(groupname, partial_roles: [], **args)
   include Capistrano::DSL
   include Capistrano::Asg::Aws::AutoScaling
   include Capistrano::Asg::Aws::EC2
@@ -41,12 +42,9 @@ def autoscale(groupname, **args)
 
   # Create an array of role names to be distributed across the ASG
   partial_queue = []
-  if args.key?(:partial_roles)
-    args[:partial_roles].each do |partial|
-      instances = partial.key?(:instances) ? partial[:instances] : 1
-      instances.times { partial_queue << partial[:name].to_s }
-    end
-    args.delete(:partial_roles)
+  partial_roles.each do |partial|
+    instances = partial.key?(:instances) ? partial[:instances] : 1
+    instances.times { partial_queue << partial[:name].to_s }
   end
 
   asg_instances.each do |asg_instance|
@@ -57,8 +55,8 @@ def autoscale(groupname, **args)
         ec2_instance = ec2_resource.instance(asg_instance.id)
         hostname = ec2_instance.private_ip_address
         puts "Autoscaling: Adding server #{hostname}"
-        # create a complete temp copy of the array contents instead of just copying the references
-        host_args = Marshal.load(Marshal.dump(args))
+        # create a deep copy of the hash so we perserve the original
+        host_args = duplicate(args)
         if additional_role = partial_queue.shift
           host_args[:roles] << additional_role
         end
