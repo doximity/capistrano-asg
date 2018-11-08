@@ -2,7 +2,6 @@ require 'aws-sdk-ec2'
 require 'aws-sdk-autoscaling'
 require 'capistrano/all'
 require 'active_support/concern'
-require 'duplicate'
 
 require 'capistrano/asg/version'
 require 'capistrano/asg/retryable'
@@ -25,7 +24,7 @@ require 'capistrano/dsl'
 
 load File.expand_path('../asg/tasks/asg.rake', __FILE__)
 
-def autoscale(groupname, partial_roles: [], **args)
+def autoscale(groupname, roles: [], partial_roles: [], **args)
   include Capistrano::DSL
   include Capistrano::Asg::Aws::AutoScaling
   include Capistrano::Asg::Aws::EC2
@@ -55,12 +54,11 @@ def autoscale(groupname, partial_roles: [], **args)
         ec2_instance = ec2_resource.instance(asg_instance.id)
         hostname = ec2_instance.private_ip_address
         puts "Autoscaling: Adding server #{hostname}"
-        # create a deep copy of the hash so we perserve the original
-        host_args = duplicate(args)
+        host_roles = roles.dup
         if additional_role = partial_queue.shift
-          host_args[:roles] << additional_role
+          host_roles << additional_role
         end
-        server(hostname, **host_args)
+        server(hostname, roles: roles, **args)
       end
     end
   end
