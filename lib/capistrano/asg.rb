@@ -58,7 +58,7 @@ def autoscale(groupname, roles: [], partial_roles: [], **args)
         if additional_role = partial_queue.shift
           host_roles << additional_role
         end
-        server(hostname, roles: roles, **args)
+        server(hostname, roles: host_roles, **args)
       end
     end
   end
