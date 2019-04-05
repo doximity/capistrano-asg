@@ -1,3 +1,17 @@
+# 0.9.0
+
+* Publish to jfrog with rubocop updates
+
+# 0.8.1
+
+* Use the default aws-sdk credential search order to use instance profiles
+  or assumed roles
+
+# 0.8.0
+
+* Wrap EC2 calls with retries
+* Adds `partial_roles` to run on a subset of instances in the ASG
+
 # 0.7.0
 
 * Update to AWS SDK v3. Thanks @jpatters and @milgner
