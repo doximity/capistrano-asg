@@ -1,7 +1,7 @@
 Changelog
 =========
 
-## 0.9.1.ghand
+## 0.9.1
 
 * Check the lifecycle state before including an instance
 
