@@ -48,5 +48,8 @@ Metrics/PerceivedComplexity:
 Rails/Output:
   Enabled: false
 
+Style/ClassVars:
+  Enabled: false
+
 Style/MixinUsage:
   Enabled: false

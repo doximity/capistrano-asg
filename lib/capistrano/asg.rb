@@ -18,6 +18,8 @@ require "capistrano/asg/launch_configuration"
 
 module Capistrano
   module Asg
+    # class variable to only set 1 primary across multiple ASG's for an app
+    @@add_primary = true
   end
 end
 
@@ -47,6 +49,7 @@ def autoscale(groupname, roles: [], partial_roles: [], **args)
     instances.times { partial_queue << partial[:name].to_s }
   end
 
+  roles << "autoscale"
   asg_instances.each do |asg_instance|
     if asg_instance.health_status != "Healthy"
       puts "Autoscaling: Skipping unhealthy instance #{asg_instance.id}"
@@ -61,7 +64,8 @@ def autoscale(groupname, roles: [], partial_roles: [], **args)
         if (additional_role = partial_queue.shift)
           host_roles << additional_role
         end
-        server(hostname, roles: host_roles, **args)
+        server(hostname, roles: host_roles, primary: @@add_primary, **args)
+        @@add_primary = false if @@add_primary
       end
     end
   end

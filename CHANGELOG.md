@@ -1,6 +1,10 @@
 Changelog
 =========
 
+## 0.10.0.ghand
+
+* Set one server for an app to primary
+
 ## 0.9.1
 
 * Check the lifecycle state before including an instance
