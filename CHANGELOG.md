@@ -1,7 +1,7 @@
 Changelog
 =========
 
-## 0.10.0.ghand
+## 0.10.0
 
 * Set one server for an app to primary
 
