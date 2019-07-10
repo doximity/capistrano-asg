@@ -9,6 +9,16 @@ module Capistrano
         include Region
         include Capistrano::DSL
 
+        # class variable to only set 1 primary across multiple ASG's for an app
+        @@add_primary = true
+
+        def primary?
+          primary_status = @@add_primary
+          @@add_primary = false if @@add_primary
+
+          primary_status
+        end
+
         def autoscaling_client
           @autoscaling_client ||= ::Aws::AutoScaling::Client.new(region: region)
         end

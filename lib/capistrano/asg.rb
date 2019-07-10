@@ -18,15 +18,6 @@ require "capistrano/asg/launch_configuration"
 
 module Capistrano
   module Asg
-    # class variable to only set 1 primary across multiple ASG's for an app
-    @@add_primary = true
-
-    def primary?
-      primary_status = @@add_primary
-      @@add_primary = false if @@add_primary
-
-      primary_status
-    end
   end
 end
 
@@ -71,7 +62,7 @@ def autoscale(groupname, roles: [], partial_roles: [], **args)
         if (additional_role = partial_queue.shift)
           host_roles << additional_role
         end
-        server(hostname, roles: host_roles, primary: Capistrano::Asg.primary?, **args)
+        server(hostname, roles: host_roles, primary: Capistrano::Asg::Aws::AutoScaling.primary?, **args)
       end
     end
   end
