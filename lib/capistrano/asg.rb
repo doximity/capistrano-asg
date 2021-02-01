@@ -57,9 +57,11 @@ def autoscale(groupname, roles: [], partial_roles: [], **args)
   roles << "autoscale"
 
   # Collect all instance ids from healthy instances
-  instance_ids = asg_instances.select do |asg_instance|
+  instance_ids = asg_instances.collect do |asg_instance|
     asg_instance.instance_id if healthy_instance?(asg_instance)
   end
+
+  instance_ids.compact!
 
   if instance_ids.empty?
     puts "Autoscaling group has no healthy instances"
