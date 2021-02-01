@@ -19,6 +19,7 @@ require "capistrano/asg/launch_configuration"
 module Capistrano
   module Asg
     class EmptyAutoscalingGroup < StandardError; end
+    class NoHealthyInstances < StandardError; end
   end
 end
 
@@ -57,20 +58,22 @@ def autoscale(groupname, roles: [], partial_roles: [], **args)
 
   # Collect all instance ids from healthy instances
   instance_ids = asg_instances.collect.each do |asg_instance|
-    unless asg_instance.health_status == "Healthy"
-      puts "Autoscaling: Skipping unhealthy instance #{asg_instance.id}"
-      next
-    end
-    unless asg_instance.lifecycle_state == "InService"
-      puts "Autoscaling: Skipping #{asg_instance.id}, lifecycle state is #{asg_instance.lifecycle_state}"
+    if asg_instance.health_status != "Healthy" || asg_instance.lifecycle_state != "InService"
+      puts "Autoscaling: Skipping #{asg_instance.id}, status: #{asg_instance.health_status}, lifecycle: #{asg_instance.lifecycle_state}"
       next
     end
 
     asg_instance.instance_id
   end
+  instance_ids.compact!
+
+  if instance_ids.empty?
+    puts "Autoscaling group has no healthy instances"
+    raise Capistrano::Asg::NoHealthyInstances
+  end
 
   # Pull all instances with enumerator to avoid hitting rate limiting for querying private IP
-  ec2_resource.instances(instance_ids: instance_ids.compact).each do |instance|
+  ec2_resource.instances(instance_ids: instance_ids).each do |instance|
     hostname = instance.private_ip_address
     puts "Autoscaling: Adding server #{hostname}"
     host_roles = roles.dup
