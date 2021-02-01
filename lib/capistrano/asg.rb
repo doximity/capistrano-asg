@@ -57,15 +57,9 @@ def autoscale(groupname, roles: [], partial_roles: [], **args)
   roles << "autoscale"
 
   # Collect all instance ids from healthy instances
-  instance_ids = asg_instances.collect.each do |asg_instance|
-    if asg_instance.health_status != "Healthy" || asg_instance.lifecycle_state != "InService"
-      puts "Autoscaling: Skipping #{asg_instance.id}, status: #{asg_instance.health_status}, lifecycle: #{asg_instance.lifecycle_state}"
-      next
-    end
-
-    asg_instance.instance_id
+  instance_ids = asg_instances.select do |asg_instance|
+    asg_instance.instance_id if healthy_instance?(asg_instance)
   end
-  instance_ids.compact!
 
   if instance_ids.empty?
     puts "Autoscaling group has no healthy instances"
@@ -96,4 +90,12 @@ def autoscale(groupname, roles: [], partial_roles: [], **args)
 
   reset_autoscaling_objects
   reset_ec2_objects
+end
+
+def healthy_instance?(asg_instance)
+  if asg_instance.health_status != "Healthy" || asg_instance.lifecycle_state != "InService"
+    puts "Autoscaling: Skipping #{asg_instance.id}, status: #{asg_instance.health_status}, lifecycle: #{asg_instance.lifecycle_state}"
+    return false
+  end
+  true
 end
