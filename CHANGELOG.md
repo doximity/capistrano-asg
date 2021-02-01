@@ -1,7 +1,7 @@
 Changelog
 =========
 
-## 0.11.0
+## 0.11.0-pre
 
 * Query for all instance IP's with a single call and fail if no healthy instances
 
