@@ -2,6 +2,6 @@
 
 module Capistrano
   module Asg
-    VERSION = "0.11.0-pre"
+    VERSION = "0.11.0"
   end
 end
