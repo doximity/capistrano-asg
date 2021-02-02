@@ -19,6 +19,7 @@ require "capistrano/asg/launch_configuration"
 module Capistrano
   module Asg
     class EmptyAutoscalingGroup < StandardError; end
+    class NoHealthyInstances < StandardError; end
   end
 end
 
@@ -54,23 +55,28 @@ def autoscale(groupname, roles: [], partial_roles: [], **args)
   end
 
   roles << "autoscale"
-  asg_instances.each do |asg_instance|
-    if asg_instance.health_status != "Healthy"
-      puts "Autoscaling: Skipping unhealthy instance #{asg_instance.id}"
-    elsif asg_instance.lifecycle_state != "InService"
-      puts "Autoscaling: Skipping #{asg_instance.id}, lifecycle state is #{asg_instance.lifecycle_state}"
-    else
-      with_retry do
-        ec2_instance = ec2_resource.instance(asg_instance.id)
-        hostname = ec2_instance.private_ip_address
-        puts "Autoscaling: Adding server #{hostname}"
-        host_roles = roles.dup
-        if (additional_role = partial_queue.shift)
-          host_roles << additional_role
-        end
-        server(hostname, roles: host_roles, **args)
-      end
+
+  # Collect all instance ids from healthy instances
+  instance_ids = asg_instances.collect do |asg_instance|
+    asg_instance.instance_id if healthy_instance?(asg_instance)
+  end
+
+  instance_ids.compact!
+
+  if instance_ids.empty?
+    puts "Autoscaling group has no healthy instances"
+    raise Capistrano::Asg::NoHealthyInstances
+  end
+
+  # Pull all instances with enumerator to avoid hitting rate limiting for querying private IP
+  ec2_resource.instances(instance_ids: instance_ids).each do |instance|
+    hostname = instance.private_ip_address
+    puts "Autoscaling: Adding server #{hostname}"
+    host_roles = roles.dup
+    if (additional_role = partial_queue.shift)
+      host_roles << additional_role
     end
+    server(hostname, roles: host_roles, **args)
   end
 
   puts "WARNING: Not all partial roles were assigned: #{partial_queue}" unless partial_queue.empty?
@@ -86,4 +92,12 @@ def autoscale(groupname, roles: [], partial_roles: [], **args)
 
   reset_autoscaling_objects
   reset_ec2_objects
+end
+
+def healthy_instance?(asg_instance)
+  if asg_instance.health_status != "Healthy" || asg_instance.lifecycle_state != "InService"
+    puts "Autoscaling: Skipping #{asg_instance.id}, status: #{asg_instance.health_status}, lifecycle: #{asg_instance.lifecycle_state}"
+    return false
+  end
+  true
 end
